@@ -1,0 +1,171 @@
+<html>
+<head>
+<style>
+h3 {float:left;}
+#newContact  {float:right;cursor:pointer;}
+.closeDiv  {float:right;cursor:pointer;padding:5px;}
+#insertform  {position: absolute; top:20px;right:10px; min-width:300px; min-height:200px; border: 1px solid gray; border-radius: 5px; background-color: white; display:none;}
+#insertMask {padding:50 10;}
+#moreTelNr  {cursor:pointer;}
+#updateMask  {position: relative; top:20px;left:30px; width:400px; min-height:200px; border: 1px solid gray; border-radius: 5px; background-color: white; display:none;}
+.show-msgbox {display:block;}
+#error-message {color:red;}
+</style>
+<script src="js/jquery-3.2.1.min.js"></script>
+<script>
+	function loadTableInfo() {
+		if (window.XMLHttpRequest) {
+			// code for IE7+, Firefox, Chrome, Opera, Safari
+			xmlhttp = new XMLHttpRequest();
+		} else {
+			// code for IE6, IE5
+			xmlhttp = new ActiveXObject('Microsoft.XMLHTTP');
+		}
+		xmlhttp.onreadystatechange = function() {
+			if (this.readyState == 4 && this.status == 200) {
+				   document.getElementById('showall').innerHTML = this.responseText;
+			}
+		};
+		xmlhttp.open('GET','getalluser.php?t=' + Math.random(),true);
+		xmlhttp.send();
+	}
+	
+	function updateFunc(id) {
+	  var xhttp;    
+	  if (id == '') {
+		document.getElementById('updateMask').innerHTML = '';
+		return;
+	  }
+	  xhttp = new XMLHttpRequest();
+	  xhttp.onreadystatechange = function() {
+		if (this.readyState == 4 && this.status == 200) {
+		  document.getElementById('updateMask').innerHTML = this.responseText;
+		}
+	  };
+	  xhttp.open('GET', 'getupdateinfo.php?id='+id, true);
+	  xhttp.send();
+	  document.getElementById('updateMask').style.display = 'block';
+	}
+
+	function insertinfo(){
+		document.getElementById('insertform').style.display = 'block';
+	}
+
+	function closeDiv(divid) {
+		document.getElementById(divid).style.display = 'none';
+	}
+	function addPhoneNumberRow(tableName) {
+		var table = document.getElementById(tableName);
+		var rowCount = document.getElementById(tableName).rows.length -1 ;
+		var row = table.insertRow(rowCount);
+		row.setAttribute("id", "row_"+rowCount);
+		var cell1 = row.insertCell(0);
+		var cell2 = row.insertCell(1);
+		cell1.innerHTML = "Telefonnummer:";
+		cell2.innerHTML = "<input type='text' class='telefon' name='"+rowCount+"' placeholder='0123456789'><input type='button' onclick='deleteRowID(\"row_"+rowCount+"\")' value='Delete'>";
+		rowCount++;
+	}
+	
+	function deleteRowID(idname) {
+	    var id= idname.replace('row_','');
+		var mode = 'deleteNum';
+		var msg = "Are you really want to delete id : "+id+" ?";
+			if(id != "" && confirm(msg)){
+				$.post('action.php',{mode:mode,id:id}, function(data){
+					$('#messageBox').addClass('show-msgbox');
+					$('#messageBox').html(data);
+					loadTableInfo();
+				});
+			}
+		document.getElementById(idname).remove();
+	}
+
+	$(document).ready(function(){
+	
+		$(document).on('click','#btnSubmit',function(e){
+			var mode = $(this).attr('name');
+			var fname = $('[name=fname]').val();
+			var lname = $('[name=lname]').val();
+			var numbers = {};
+			$('.telefon').each(function() {
+				numbers[$(this).attr("name")] = $(this).val();
+			});
+			
+			if(fname != "" && lname != ""){
+				$.post('action.php',{mode:mode,fname:fname,lname:lname,numbers:numbers}, function(data){
+					$('#messageBox').addClass('show-msgbox');
+					$('#messageBox').html(data);
+					loadTableInfo();
+					closeDiv('insertform');
+				});
+				$('[name=fname]').val("");
+				$('[name=lname]').val("");
+				$('.telefon').val("");
+			}else{
+			e.preventDefault();
+			$first = (fname == "")? "vorname" : "";
+			$seceond = (lname =="")? "nachname" : "";
+			$('#error-message').html("Please insert "+$first+" "+$seceond+" name.");
+			}
+			
+		});
+		
+		$(document).on('click','#btnUpdate',function(){
+			var mode = $(this).attr('name');
+			var id = $(this).val();
+			var fname = $('[name=firstname]').val();
+			var lname = $('[name=lastname]').val();
+			var numbers = {};
+			$('.telefon').each(function() {
+				numbers[$(this).attr("name")] = $(this).val();
+			});
+			
+			if(fname != "" && lname != ""){
+				$.post('action.php',{mode:mode,id:id,fname:fname,lname:lname,numbers:numbers}, function(data){
+					$('#messageBox').addClass('show-msgbox');
+					$('#messageBox').html(data);
+					updateFunc(id);
+					loadTableInfo();
+				});
+			}
+		});
+		
+		$(document).on('click','#btnDelete',function(){
+			var mode = $(this).attr('name');
+			var id = $(this).val();
+			var msg = "Are you really want to delete id : "+id+" ?";
+			if(id != "" && confirm(msg)){
+				$.post('action.php',{mode:mode,id:id}, function(data){
+					$('#messageBox').addClass('show-msgbox');
+					$('#messageBox').html(data);
+					loadTableInfo();
+				});
+			}
+		});
+		
+		loadTableInfo();
+	});			
+</script>
+</head>
+<body>
+<h3>Adressbuch</h3>
+<div id="newContact"  onclick="insertinfo()">Neuen Kontakt Anlegen</div>
+<div id="insertform"> 
+	<div class="closeDiv" onclick="closeDiv('insertform')">close</div>
+	<div id="insertMask">
+		<table id="formTable">
+		  <tr><td>Vorname:</td><td><input type="text" name="fname" placeholder="Mickey">*</td></tr>
+		  <tr><td>Nachname:</td><td><input type="text" name="lname" placeholder="Mouse">*</td></tr>
+		  <tr><td>Telefonnummer:</td><td><input type="text" class="telefon" name="0" placeholder="0123456789"></td></tr>
+		  <tr><td><div id="moreTelNr" onclick="addPhoneNumberRow('formTable')"><a href="#">more Tel Nr.</a></div></td><td><input id="btnSubmit" type="submit" name="insert" value="Submit"></td></tr>
+		</table>
+		<div id="error-message"></div>
+	</div>
+
+</div>
+<div id ="messageBox"></div>
+<div id="updateMask"></div>
+<br><br>
+<div id="showall"></div>
+</body>
+</html>
